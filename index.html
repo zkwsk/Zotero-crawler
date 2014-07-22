@@ -14,21 +14,19 @@
 <!--[if lt IE 7]>  
 	<link rel="stylesheet" type="text/css" media="all" href="css/ie6.css"/>
 <![endif]-->
-<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+<script type="text/javascript" src="Table.js"></script> 
 </head>
 
 <body>
-	<h1>Hello World!</h1>
+	<div id="javascript"></div>
+	<script>
 
-	<ul class="tags">
-		<li>Hello</li>
-		<li>This</li>
-		<li>Is</li>
-		<li>Freaking</li>
-		<li>Hello</li>
+	t = new Table();
+	t.addColumn('Fish', 'Salmon', 'Lobster', 'Trout');
+	t.addColumn('Birds','Blackbird','Sparrow','Eagle','Penguin');
+	t.addColumn('Mammals','Cat','Dog','Hedgehog','Dog','Hedgehog','Dog','Hedgehog');
+	t.renderCSV('<br/>');
 
-	</ul>
-
-	<script src="Tagcounter.js"></script>
+	</script>
 </body>
 </html>

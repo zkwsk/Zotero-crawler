@@ -9,20 +9,22 @@ function logTags() {
 }
 
 //Article Contructor
-Article = function(_title, _journal, _date, _volume, _issue, _pages, _abstract, _year, _articleTags, _authors, _theme, _type, _theory) {
-	this.title = _title;
-	this.journal = _journal;
-	this.date = _date;
-	this.volume = _volume;
-	this.issue = _issue;
-	this.pages = _pages;
-	this.abstract = _abstract;
+Article = function(_title, _journal, _date, _volume, _issue, _pages, _abstract,_articleTags, _authors, _theme, _type, _theory, _findings, _relevance) {
+	this.title = normalizeAttr(_title);
+	this.journal = normalizeAttr(_journal);
+	this.date = normalizeAttr(_date);
+	this.volume = normalizeAttr(_volume);
+	this.issue = normalizeAttr(_issue);
+	this.pages = normalizeAttr(_pages);
+	this.abstract = normalizeAttr(_abstract);
 	this.year = this.date.replace(/[A-Za-z$-]/g, "").trim();
-	this.authors = _authors; //Array
-	this.tags = _articleTags; //Array full of Tag objects
-	this.theme = _theme;
+	this.authors = normalizeAttr(_authors); //Array
+	this.tags = normalizeAttr(_articleTags); //Array full of Tag objects
+	this.theme = normalizeAttr(_theme);
 	this.type = _type; //ArticleType object
-	this.theory = _theory; //Array of theories
+	this.theory = normalizeAttr(_theory); //Array of theories
+	this.findings = normalizeAttr(_findings); //Array of findings
+	this.relevance = normalizeAttr(_relevance);
 };
 
 //Getters
@@ -65,6 +67,21 @@ Article.prototype.getTagsCSV = function() {
 	}
 	return string;
 };
+Article.prototype.getFindings = function() {
+	return this.findings;
+};
+Article.prototype.getFindingsCSV = function() {
+	var string = '';
+	for (var i in this.findings) {
+		string = string + this.findings[i];
+		
+		//Add a trailing comma for all BUT the last element
+		if (i != this.findings.length -1) {
+			string = string + ', ';
+		}
+	}
+	return string;
+};
 Article.prototype.getAuthors = function() {
 	return this.authors;
 };
@@ -97,6 +114,19 @@ Article.prototype.getTheory = function() {
 		}
 	}
 	return out;
+};
+Article.prototype.getFindings = function() {
+	var out = '';
+	for (var n in this.findings) {
+		out += this.findings[n];
+		if (n != this.findings.length-1){
+			out += ', ';
+		}
+	}
+	return out;
+};
+Article.prototype.getRelevance = function() {
+	return this.relevance;
 };
 Article.prototype.getType = function() {
 	return this.type;
@@ -146,10 +176,13 @@ Article.prototype.setFourthAuthor = function(_fourthAuthor) {
 //ArticleType Constructor
 ArticleType = function(input) {
 
+
+
 	this.qualitative = false;
 	this.quantitative = false;
 	this.conceptual = false;
-	this.designscience = false;
+	this.explorative = false;
+	this.literatureReview = false;
 
 	for (var i = 0; i < input.length; i++) {
 		if (input[i].toLowerCase() == 'qualitative') {
@@ -161,8 +194,11 @@ ArticleType = function(input) {
 		if (input[i].toLowerCase() == 'conceptual') {
 			this.conceptual = true;
 		}
-		if (input[i].toLowerCase() == 'design science') {
-			this.designscience = true;
+		if (input[i].toLowerCase() == 'explorative') {
+			this.explorative = true;
+		}
+		if (input[i].toLowerCase() == 'literature review') {
+			this.literatureReview = true;
 		}
 	}
 };
@@ -177,8 +213,11 @@ ArticleType.prototype.isQuantitative = function() {
 ArticleType.prototype.isConceptual = function() {
 	return this.conceptual;
 };
-ArticleType.prototype.isDesignscience = function() {
-	return this.designscience;
+ArticleType.prototype.isExplorative = function() {
+	return this.exploratory;
+};
+ArticleType.prototype.isLiteratureReview = function() {
+	return this.literatureReview;
 };
 ArticleType.prototype.getArticleType = function() {
 	var types = [];
@@ -323,11 +362,12 @@ function generateArticleObjects() {
 	//Is run for each article
 	$('li.item').each(function() {
 		
-		var title, journal, date, volume, issue, pages, abstract, year, theme, type;
+		var title, journal, date, volume, issue, pages, abstract, year, theme, relevance, type;
 		var authors = [];
 		var articleTags = [];
 		var types = [];
 		var theory = [];
+		var findings = [];
 		title = $(this).children('h2').text();
 		
 		//Sets up basic attributes for the articles based on clear-text headings
@@ -351,25 +391,30 @@ function generateArticleObjects() {
 		});
 
 		theme = $(this).find('ul.notes div.theme').text();
-		
-		//findTheories($(this));
+		relevance = $(this).find('ul.notes div.relevance').text();
 
+		//Pushing to arrays
 		$(this).find('ul.notes div.theory').each(function() {
 			theory.push($(this).text());
 		});
-
+		$(this).find('ul.notes div.findings').each(function() {
+			findings.push($(this).text());
+		});
 		$(this).find('ul.notes div.type').each(function() {
 			types.push($(this).text());
 		});
-		
+		$(this).find('ul.notes div.type').each(function() {
+			types.push($(this).text());
+		});
 		type = new ArticleType(types);
-
 		$(this).find('ul.tags li').each(function() {
 			articleTags.push($(this).text());
 		});
 
+		
+
 		//Build object
-		articles.push(new Article(title, journal, date, volume, issue, pages, abstract, null, articleTags, authors, theme, type, theory));
+		articles.push(new Article(title, journal, date, volume, issue, pages, abstract, articleTags, authors, theme, type, theory, findings, relevance));
 	});
 	return 'article objects generated';
 }
@@ -397,7 +442,7 @@ function elementLineCSV(_newlineString, _elements) {
 }
 
 //Takes an arbitrary list of headers and automatically generates the according CSV
-//Supported headers: title, journal, date, volume, issue, pages, abstract, year, tags, authors, theme, type, theory
+//Supported headers: title, journal, date, volume, issue, pages, abstract, year, tags, authors, theme, type, theory, findings, relevance
 function customListCSV() {
 
 	var headers = [];
@@ -497,7 +542,18 @@ function customListCSV() {
 			} else if (headers[i].toLowerCase() == 'theory') {
 				if (typeof article.getTheory() == 'string') {
 					row.push(article.getTheory());
-					console.log(typeof article.getTheory());
+				} else {
+					row.push(emptystring);
+				}
+			} else if (headers[i].toLowerCase() == 'findings') {
+				if (typeof article.getFindingsCSV() == 'string') {
+					row.push(article.getFindingsCSV());
+				} else {
+					row.push(emptystring);
+				}
+			} else if (headers[i].toLowerCase() == 'relevance') {
+				if (typeof article.getRelevance() == 'string') {
+					row.push(article.getRelevance());
 				} else {
 					row.push(emptystring);
 				}
@@ -509,7 +565,353 @@ function customListCSV() {
 		output += elementLineCSV(newline,row);
 		
 	}
+
 	return output;
+}
+
+//Takes an arbitrary list of headers and automatically generates the according CSV
+//Supported headers: title, journal, date, volume, issue, pages, abstract, year, tags, authors, theme, type, theory
+function customTable() {
+
+	var headers = [];
+	
+	var table = new Table();
+	var emptystring = '';
+
+
+	//Populate the headers array
+	for (var i in arguments) {
+		headers.push(arguments[i]);
+	}
+
+	//Each header is matched with a number of possible keywords
+	for (var k in headers) {
+		
+		if (headers[k].toLowerCase() == 'title') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var title = articles[n].getTitle();
+
+				if (typeof title == 'string') {
+					//Adds each element to the column
+					column.push(title);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'journal') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var journal = articles[n].getJournal();
+
+				if (typeof journal == 'string') {
+					//Adds each element to the column
+					column.push(journal);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'date') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var date = articles[n].getDate();
+
+				if (typeof date == 'string') {
+					//Adds each element to the column
+					column.push(date);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'volume') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var volume = articles[n].getVolume();
+
+				if (typeof volume == 'string') {
+					//Adds each element to the column
+					column.push(volume);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'issue') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var issue = articles[n].getIssue();
+
+				if (typeof issue == 'string') {
+					//Adds each element to the column
+					column.push(issue);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'pages') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var pages = articles[n].getPages();
+
+				if (typeof pages == 'string') {
+					//Adds each element to the column
+					column.push(pages);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'abstract') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var abstract = articles[n].getAbstract();
+
+				if (typeof abstract == 'string') {
+					//Adds each element to the column
+					column.push(abstract);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'year') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var year = articles[n].getYear();
+
+				if (typeof year == 'string') {
+					//Adds each element to the column
+					column.push(year);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'tags') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var tags = articles[n].getTagsCSV();
+
+				if (typeof tags == 'string') {
+					//Adds each element to the column
+					column.push(tags);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'authors') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var authors = articles[n].getAuthorsCSV();
+
+				if (typeof authors == 'string') {
+					//Adds each element to the column
+					column.push(authors);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'theme') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var theme = articles[n].getTheme();
+
+				if (typeof theme == 'string') {
+					//Adds each element to the column
+					column.push(theme);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'type') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var type = articles[n].getType().getArticleType();
+
+				if (typeof type == 'string') {
+					//Adds each element to the column
+					column.push(type);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'theory') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var theory = articles[n].getTheory();
+
+				if (typeof theory == 'string') {
+					//Adds each element to the column
+					column.push(theory);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'findings') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var findings = articles[n].getFindings();
+
+				if (typeof findings == 'string') {
+					//Adds each element to the column
+					column.push(findings);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else if (headers[k].toLowerCase() == 'relevance') {
+
+			var column = [];
+			//Adds the header as first element of the column
+			column.push(headers[k].toUpperCase());
+
+			//Loop through all articles
+			for (var n in articles) {
+				var relevance = articles[n].getRelevance();
+
+				if (typeof relevance == 'string') {
+					//Adds each element to the column
+					column.push(relevance);
+				} else {
+					//Adds an empty string in case no element is found
+					column.push(emptystring);
+				}
+			}
+
+			//Adds the populated column to the table
+			table.addColumnAsArray(column);
+		}
+		else {
+			console.log('customTable() was supplied with wrong arguments');
+		}
+	}
+	//Renders the table as CSV
+	table.renderCSV();
+}
+function checkedTable() {
+
 }
 
 //Converts from 'camelCase' to 'Camel Case'
@@ -525,15 +927,43 @@ function fixStr(str) {
     return(out);
 }
 
+//Function intended to be run on all attributes, when new objects are created
+function normalizeAttr(object) {
+	
+	if (object instanceof Array) {
+		var array = object;
+		for (var i in array) {
+			object[i] = replaceQuotes(array[i]);
+		}
+		return array;
+	} else if (typeof object == 'string') {
+		var string = object;
+		string = replaceQuotes(string);
+		return string;
+	}  else if (typeof object == 'undefined') {
+		//Do nothing
+	} else {
+		console.log('could not normalize attribute');
+	}
+
+	
+}
+
+//Converts doublequotes to singlequotes
+function replaceQuotes(string) {
+	return string.replace(/\"/g,'\'');
+}
 
 $(document).ready(function() {
 
-	//"de-escape HTML by converting &lt; to < and &gt; to >"
+	//"de-escape HTML by converting &lt; to < and &gt; to >" and converts doublequotes "" to singlequotes ''
 	$('ul.notes li p').each(function(){
 		var $this = $(this);
 		var t = $this.text();
 		$this.html(t.replace('&lt','<').replace('&gt', '>'));
 	});
+
+
 
 	console.log(generateArticleObjects());
 });
